@@ -38,6 +38,12 @@ public class Doctor extends  Person implements Serializable, Comparable<Doctor> 
         this.consultationList = consultationList;
     }
 
+    public String getFullName() {
+        String fn = firstName.substring(0, 1).toUpperCase() + firstName.substring(1);
+        String sn = surname.substring(0, 1).toUpperCase() + surname.substring(1);
+        return fn + " " + sn;
+    }
+
     public static int getCount() {
         return count;
     }
