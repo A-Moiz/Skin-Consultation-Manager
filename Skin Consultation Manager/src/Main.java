@@ -1,10 +1,24 @@
+import java.awt.Color;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.InputMismatchException;
 import java.util.Scanner;
 import java.util.regex.Pattern;
+import javax.swing.JFrame;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.ListSelectionModel;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 
-public class Main implements  SkinConsultationManager {
+public class Main implements SkinConsultationManager {
+
     ArrayList<Doctor> doctorsList = new ArrayList<>();
     int indexNum;
     final private int listLength = 10;
@@ -12,59 +26,240 @@ public class Main implements  SkinConsultationManager {
     Scanner input = new Scanner(System.in);
     private String file = "doctors.csv";
 
-    public  ArrayList<Doctor> getDoctorsList() {
+    public ArrayList<Doctor> getDoctorsList() {
         return doctorsList;
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException, FileNotFoundException, ClassNotFoundException {
+        Main system = new Main();
 
+        while (!exit) {
+            system.menuLoop();
+        }
     }
 
+    // Getting details and adding Doctor to ArrayList
     @Override
     public void addDoctor() {
-        // Checking if space if available in list
         if (!(doctorsList.size() < listLength)) {
-            System.out.println("Cannot add anymore doctors at the moment. Please try again later.");
+            System.out.println("Cannot add anymore doctors at the moment.");
         } else {
-            // Getting Doctor details
+            String gender = getGender();
             String fn = getFn();
             String sn = getSn();
             String mobileNum = getNum();
-            String gender = getGender();
             int dobDate = getDate();
             int dobMonth = getMonth();
             int dobYear = getYear();
             String specialisation = getSpecialisation();
 
-            // Creating DOB
             Date DOB = new Date(dobDate, dobMonth, dobYear);
-            // Creating Doctor
             Doctor doctor = new Doctor(fn, sn);
-            // Adding input details to Doctor
-            doctor.setMobileNum(mobileNum);
             doctor.setGender(gender);
-            doctor.setDOB(DOB);
             doctor.setSpecialisation(specialisation);
-            // Adding Doctor to list
+            doctor.setMobileNum(mobileNum);
+            doctor.setDOB(DOB);
+
             doctorsList.add(doctor);
             printDash();
-            System.out.println(doctor.getFullName() + " (Medical Number: )" + doctor.getMedicalLicenceNumber() + " has been added.");
+            System.out.println(fn + " " + sn + " (Medical Number: " + doctor.getMedicalLicenceNumber() + ") has been added");
         }
     }
 
+    // Getting Medical Number and removing if exists
     @Override
     public void removeDoctor() {
+        if ((doctorsList.isEmpty())) {
+            System.out.println("The list is empty, cannot remove anyone");
+        } else {
+            doctorsList();
+            System.out.println("Enter the ID of the doctor you wish to remove");
+            int medicalNum = getMedicalNumber();
+            boolean deleted = false;
 
+            for (int i = 0; i < doctorsList.size(); i++) {
+                if (doctorsList.get(i).getMedicalLicenceNumber() == medicalNum) {
+                    doctorsList.remove(i);
+                    System.out.println("Doctor ID: " + medicalNum + " has been removed");
+                    System.out.println("There are now " + doctorsList.size() + " doctor(s)");
+                    deleted = true;
+                    break;
+                }
+            }
+
+            if (!deleted) {
+                System.out.println("Doctor does not exist");
+            }
+        }
     }
 
+    // Printing out all the doctors in the ArrayList
     @Override
     public void doctorsList() {
+        Collections.sort(doctorsList);
+        if (doctorsList.isEmpty()) {
+            System.out.println("No doctors have been created");
+        } else {
+            System.out.print("Doctors: ");
+            System.out.println("");
+            for (int i = 0; i < doctorsList.size(); i++) {
+                System.out.println(doctorsList.get(i).toString());
+            }
+        }
+    }
+
+    // Save Doctors to file
+    @Override
+    public void saveData() throws IOException {
+        boolean saved = false;
+        try {
+            FileWriter fw = new FileWriter(file);
+            BufferedWriter bw = new BufferedWriter(fw);
+            for (int i = 0; i < doctorsList.size(); i++) {
+                bw.write(doctorsList.get(i).saveToFile());
+                saved = true;
+            }
+            bw.close();
+            fw.close();
+        } catch (IOException e) {
+            System.out.println("Error");
+        }
+
+        if (saved) {
+            System.out.println("Data saved");
+        } else {
+            System.out.println("Data could not be saved");
+        }
+    }
+
+    // Load Doctors from file
+    private void loadData() throws FileNotFoundException, IOException {
+        doctorsList.clear();
+        boolean restored = false;
+        String[] stringArray = new String[20];
+        String stringDOB;
+        String[] dob = new String[20];
+        int medicalNum;
+        String line = "";
+        String splitBy = ", ";
+        String splitDOB = "/";
+        try {
+            BufferedReader br = new BufferedReader(new FileReader(file));
+            while ((line = br.readLine()) != null) {
+                stringArray = line.split(splitBy);
+                stringDOB = stringArray[3];
+                dob = stringDOB.split(splitDOB);
+                medicalNum = Integer.parseInt(stringArray[5]);
+                int date = Integer.parseInt(dob[0]);
+                int month = Integer.parseInt(dob[1]);
+                int year = Integer.parseInt(dob[2]);
+                Date DOB = new Date(date, month, year);
+                Doctor doc = new Doctor(stringArray[0], stringArray[1]);
+                doc.setMobileNum(stringArray[2]);
+                doc.setDOB(DOB);
+                doc.setSpecialisation(stringArray[4]);
+                doc.setMedicalLicenceNumber(medicalNum);
+                doc.setGender(stringArray[6]);
+                doctorsList.add(doc);
+                restored = true;
+
+            }
+        } catch (FileNotFoundException e) {
+            System.out.println("File not found");
+        } catch (IOException e) {
+            System.out.println("Error");
+        } catch (NullPointerException e) {
+            System.out.println("File is empty");
+        }
+
+        if (restored) {
+            System.out.println("Data restored");
+        } else {
+            System.out.println("Data could not be restored");
+        }
 
     }
 
-    @Override
-    public void saveData() throws IOException {
+    // View Dotors in a table
+    private void doctorTable() {
+        if (doctorsList.isEmpty()) {
+            System.out.println("There are currently no Doctors to be displayed");
+        } else {
+            DoctorsList listOfDoctors = new DoctorsList(doctorsList);
+            JTable myTable = new JTable(listOfDoctors);
+            myTable.setBackground(Color.orange);
+            myTable.setAutoCreateRowSorter(true);
+            JScrollPane panel = new JScrollPane(myTable);
+            JFrame frame = new JFrame();
+            frame.add(panel);
+            frame.setTitle("List of Doctors");
+            frame.setVisible(true);
+            frame.setSize(1050, 400);
+        }
+    }
 
+    // Table to select a Doctor
+    public void addingConsultation(ArrayList<Doctor> doctorsList) {
+        if (doctorsList.isEmpty()) {
+            System.out.println("There are currently no Doctors to be displayed");
+        } else {
+            DoctorsAvailable doctors = new DoctorsAvailable(doctorsList);
+            JTable table = new JTable(doctors);
+            table.setAutoCreateRowSorter(true);
+            table.setBackground(Color.orange);
+            JScrollPane p1 = new JScrollPane(table);
+            JFrame f = new JFrame();
+            f.add(p1);
+            f.setTitle("Select a Doctor");
+            f.setVisible(true);
+            f.setSize(1050, 400);
+            ListSelectionModel model = table.getSelectionModel();
+            // Listener to open consultation form
+            model.addListSelectionListener(new ListSelectionListener() {
+                @Override
+                public void valueChanged(ListSelectionEvent e) {
+                    if (!model.isSelectionEmpty()) {
+                        indexNum = model.getMinSelectionIndex();
+                        f.dispose();
+                        AddConsultation con = new AddConsultation(indexNum, doctorsList);
+                    }
+                }
+            });
+        }
+    }
+
+    // View consultation details in a table
+    private void viewConsultations() {
+        if (doctorsList.isEmpty()) {
+            System.out.println("There are currently no Doctors to be displayed");
+        } else {
+            ViewConsultation doc = new ViewConsultation(doctorsList);
+            JTable myTable = new JTable(doc);
+            myTable.setBackground(Color.orange);
+            myTable.setAutoCreateRowSorter(true);
+            JScrollPane panel = new JScrollPane(myTable);
+            JFrame frame = new JFrame();
+            frame.add(panel);
+            frame.setTitle("View Consultations");
+            frame.setVisible(true);
+            frame.setSize(1280, 400);
+            frame.setResizable(false);
+        }
+    }
+
+    // View consultation in the console
+    private void viewConsInConsole() {
+        if (doctorsList.isEmpty()) {
+            System.out.println("There are currently no Doctors to be displayed");
+        } else {
+            for (int i = 0; i < doctorsList.size(); i++) {
+                if (!(doctorsList.get(i).getConsultationList().isEmpty())) {
+                    System.out.println(doctorsList.get(i).consultations());
+                } else {
+                    System.out.println("No consultations have been added yet with " + doctorsList.get(i).getFirstName() + " " + doctorsList.get(i).getSurname());
+                }
+            }
+        }
     }
 
     // Exit the program
@@ -77,6 +272,57 @@ public class Main implements  SkinConsultationManager {
     private void saveAndExit() throws IOException {
         saveData();
         exit();
+    }
+
+    // Loop through the options
+    private void menuLoop() throws IOException, FileNotFoundException, ClassNotFoundException {
+        int num = -1;
+        while (num < 0) {
+            menuOptions();
+            try {
+                int choice = Integer.valueOf(input.nextLine());
+                num = 1;
+                switch (choice) {
+                    case 1:
+                        addDoctor();
+                        break;
+                    case 2:
+                        removeDoctor();
+                        break;
+                    case 3:
+                        doctorsList();
+                        break;
+                    case 4:
+                        saveData();
+                        break;
+                    case 5:
+                        loadData();
+                        break;
+                    case 6:
+                        doctorTable();
+                        break;
+                    case 7:
+                        addingConsultation(doctorsList);
+                        break;
+                    case 8:
+                        viewConsultations();
+                        break;
+                    case 9:
+                        viewConsInConsole();
+                        break;
+                    case 10:
+                        saveAndExit();
+                    case 11:
+                        exit();
+                        break;
+                    default:
+                        System.out.println("Option unavailable");
+                }
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid option entered");
+                num = -1;
+            }
+        }
     }
 
     // Validating name
@@ -227,12 +473,41 @@ public class Main implements  SkinConsultationManager {
         return medicalNum;
     }
 
-    // Printing dash for separation
+    // Options available to user
+    private void menuOptions() {
+        printDash();
+        System.out.println("Choose one of the following options: ");
+        printStar();
+        System.out.println("1: Add a doctor");
+        printStar();
+        System.out.println("2: Delete a doctor");
+        printStar();
+        System.out.println("3: View all doctors");
+        printStar();
+        System.out.println("4: Save data into file");
+        printStar();
+        System.out.println("5: Load data from file");
+        printStar();
+        System.out.println("6: View doctors in table");
+        printStar();
+        System.out.println("7: Add a consultation");
+        printStar();
+        System.out.println("8: View consultations in table");
+        printStar();
+        System.out.println("9: View consultations in console");
+        printStar();
+        System.out.println("10: Save & Exit");
+        printStar();
+        System.out.println("11: Exit");
+        printDash();
+    }
+
+    // Printing dash for aesthetics
     private void printDash() {
         System.out.println("----------------------------------------");
     }
 
-    // Printing star for separation
+    // Prining star for aesthetics
     private void printStar() {
         System.out.print("* ");
     }
