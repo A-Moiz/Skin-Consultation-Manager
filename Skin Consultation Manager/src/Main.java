@@ -330,6 +330,11 @@ public class Main implements SkinConsultationManager {
         return Pattern.matches("[a-zA-Z]+", name);
     }
 
+    // Validating specialisation
+    private boolean isSpecialisation(String input) {
+        return Pattern.matches("[a-zA-Z\\s]+", input);
+    }
+
     // Validating gender
     private boolean isGender(String gender) {
         return gender.equalsIgnoreCase("Male") || gender.equalsIgnoreCase("Female") || gender.equalsIgnoreCase("Other");
@@ -435,14 +440,31 @@ public class Main implements SkinConsultationManager {
         return year;
     }
 
-    // Getting specialisation
+//    // Getting specialisation
+//    private String getSpecialisation() {
+//        String specialisation = "123";
+//        while (!isWord(specialisation)) {
+//            System.out.print("Enter your specialisation: ");
+//            specialisation = input.nextLine();
+//            specialisation = specialisation.substring(0, 1).toUpperCase() + specialisation.substring(1);
+//            input.nextLine();
+//        }
+//        return specialisation;
+//    }
+
+    // Getting specialization
     private String getSpecialisation() {
         String specialisation = "123";
-        while (!isWord(specialisation)) {
-            System.out.print("Enter your specialisation: ");
-            specialisation = input.next();
-            specialisation = specialisation.substring(0, 1).toUpperCase() + specialisation.substring(1);
-            input.nextLine();
+        while (!isSpecialisation(specialisation)) {
+            System.out.print("Enter your specialization: ");
+            specialisation = input.nextLine();
+
+            // Check if the input string has a non-zero length before manipulating it
+            if (specialisation.length() > 0) {
+                specialisation = specialisation.substring(0, 1).toUpperCase() + specialisation.substring(1);
+            } else {
+                System.out.println("Invalid specialization. Please enter a valid specialization.");
+            }
         }
         return specialisation;
     }
